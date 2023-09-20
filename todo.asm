@@ -1,5 +1,6 @@
 format ELF64 executable
 
+SYS_read equ 0
 SYS_write equ 1
 SYS_exit equ 60
 SYS_socket equ 41
@@ -19,6 +20,25 @@ EXIT_SUCCESS equ 0
 EXIT_FAILURE equ 1
 
 MAX_CONN equ 5
+REQUEST_CAP equ 128*1024
+TODO_SIZE equ 256
+TODO_CAP equ 256
+
+macro funcall2 func, a, b
+{
+    mov rdi, a
+    mov rsi, b
+    call func
+} 
+
+macro funcall4 func, a, b, c, d
+{
+    mov rdi, a
+    mov rsi, b
+    mov rdx, c
+    mov r10, d
+    call func
+} 
 
 macro syscall1 number, a
 {
@@ -46,11 +66,12 @@ macro syscall3 number, a, b, c
 
 macro write fd, buf, count
 {
-    mov rax, SYS_write
-    mov rdi, fd
-    mov rsi, buf
-    mov rdx, count
-    syscall
+    syscall3 SYS_write, fd, buf, count
+}
+
+macro read fd, buf, count
+{
+    syscall3 SYS_read, fd, buf, count
 }
 
 macro close fd
@@ -96,12 +117,19 @@ macro exit code
 segment readable executable
 entry main
 main:
+    mov [todo_end_offset], 0
+    funcall2 add_todo, coffee, coffee_len
+    funcall2 add_todo, tea, tea_len
+    funcall2 add_todo, milk, milk_len
+    funcall2 add_todo, get, get_len
+    funcall2 add_todo, post, post_len
+
     write STDOUT, start, start_len
 
     write STDOUT, socket_trace_msg, socket_trace_msg_len
     socket AF_INET, SOCK_STREAM, 0
     cmp rax, 0
-    jl error
+    jl .error
     mov qword [sockfd], rax
 
     write STDOUT, bind_trace_msg, bind_trace_msg_len
@@ -110,35 +138,179 @@ main:
     mov dword [servaddr.sin_addr], INADDR_ANY
     bind [sockfd], servaddr.sin_family, sizeof_servaddr
     cmp rax, 0
-    jl error
+    jl .error
 
     write STDOUT, listen_trace_msg, listen_trace_msg_len
     listen [sockfd], MAX_CONN
     cmp rax, 0
-    jl error
+    jl .error
 
-next_request:
+.next_request:
     write STDOUT, accept_trace_msg, accept_trace_msg_len
     accept [sockfd], cliaddr.sin_family, cliaddr_len
     cmp rax, 0
-    jl error
+    jl .error
 
     mov qword [connfd], rax
 
-    write [connfd], response, response_len
+    read [connfd], request, REQUEST_CAP
+    cmp rax, 0
+    jl .error
+    mov [request_len], rax
 
-    jmp next_request
+    write STDOUT, request, [request_len]
 
+    funcall4 starts_with, [request_len], request, get_len, get
+    cmp rax, 0
+    jg .handle_get_method
+
+    funcall4 starts_with, [request_len], request, post_len, post
+    cmp rax, 0
+    jg .handle_post_method
+
+    funcall4 starts_with, [request_len], request, put_len, put
+    cmp rax, 0
+    jg .handle_put_method
+
+    write [connfd], response_405, response_405_len
+    close [connfd]
+    jmp .next_request
+
+.handle_get_method:
+    mov rdi, [request_len]
+    sub rdi, get_len
+    mov rsi, request + get_len
+    mov rdx, index_route_len
+    mov r10, index_route
+    call starts_with
+    cmp rax, 0
+    jg .handle_get_index
+
+    write [connfd], response_404, response_404_len
+    close [connfd]
+    jmp .next_request
+
+.handle_post_method:
+    write [connfd], post_method_response, post_method_response_len
+    close [connfd]
+    jmp .next_request
+
+.handle_put_method:
+    write [connfd], put_method_response, put_method_response_len
+    close [connfd]
+    jmp .next_request
+
+.handle_get_index:
+    write [connfd], index_page_response, index_page_response_len
+    write [connfd], index_page_header, index_page_header_len
+    call render_todos_as_html
+    write [connfd], index_page_footer, index_page_footer_len
+    close [connfd]
+    jmp .next_request
+
+.shutdown:
     write STDOUT, ok_msg, ok_msg_len
     close [connfd]
     close [sockfd]
     exit 0
 
-error:
+.error:
     write STDERR, error_msg, error_msg_len
     close [connfd]
     close [sockfd]
     exit 1
+
+;; rdi - buf
+;; rsi - count
+add_todo:
+   ;; TODO: add check for todo capacity overflow
+
+   ;; +*******
+   ;;  ^
+   ;;  rax
+   mov rax, todo_begin
+   add rax, [todo_end_offset]
+   mov rbx, rsi
+   mov byte [rax], bl
+   inc rax
+
+   ;; dst:   [rax]
+   ;; src:   [rdi]
+   ;; count: bl
+.next_byte:
+   cmp bl, 0
+   jle .done
+   mov cl, byte [rdi]
+   mov byte[rax], cl
+   inc rax
+   inc rdi
+   dec bl
+   jmp .next_byte
+.done:
+   add [todo_end_offset], TODO_SIZE
+   ret
+
+render_todos_as_html:
+    push todo_begin
+.next_todo:
+    mov rax, [rsp]
+    mov rbx, todo_begin
+    add rbx, [todo_end_offset]
+    cmp rax, rbx
+    jge .done
+
+    write [connfd], todo_header, todo_header_len
+    
+    mov rax, SYS_write
+    mov rdi, [connfd]
+    mov rsi, [rsp]
+    inc rsi
+    xor rdx, rdx
+    mov dl, byte [rsp]
+    syscall
+
+    write [connfd], todo_footer, todo_footer_len
+    mov rax, [rsp]
+    add rax, TODO_SIZE
+    mov [rsp], rax
+    jmp .next_todo
+.done:
+    pop rax
+    ret
+
+;; rdi - sv.count
+;; rsi - sv.data
+;; rdx - prefix.count
+;; r10 - prefix.data
+starts_with:
+    xor rax, rax
+    xor rbx, rbx
+.next_char:
+    cmp rdi, 0
+    jle .done
+    cmp rdx, 0
+    jle .done
+
+    mov al, byte [rsi]
+    mov bl, byte [r10]
+    cmp rax, rbx
+    jne .done
+
+    dec rdi
+    inc rsi
+    dec rdx
+    inc r10
+    jmp .next_char
+
+.done:
+    cmp rdx, 0
+    je .yes
+.no:
+    mov rax, 0
+    ret
+.yes:
+    mov rax, 1
+    ret
 
 ;; db - 1 byte
 ;; dw - 2 byte
@@ -165,12 +337,65 @@ cliaddr_len dd sizeof_servaddr
 hello db "Hello from flat assembler!", 10
 hello_len = $ - hello
 
-response db "HTTP/1.1 200 OK", 13, 10
-         db "Content-Type: text/html; charset=utf-8", 13, 10
-         db "Connection: close", 13, 10
-         db 13, 10
-         db "<h1>Hello from flat assembler!</h1>", 10
-response_len = $ - response
+response_404 db "HTTP/1.1 404 Not found", 13, 10
+             db "Content-Type: text/html; charset=utf-8", 13, 10
+             db "Connection: close", 13, 10
+             db 13, 10
+             db "<h1>Page not found</h1>", 10
+response_404_len = $ - response_404
+
+response_405 db "HTTP/1.1 405 Method Not Allowed", 13, 10
+             db "Content-Type: text/html; charset=utf-8", 13, 10
+             db "Connection: close", 13, 10
+             db 13, 10
+             db "<h1>Method not Allowed</h1>", 10
+response_405_len = $ - response_405
+
+index_page_response db "HTTP/1.1 200 OK", 13, 10
+                    db "Content-Type: text/html; charset=utf-8", 13, 10
+                    db "Connection: close", 13, 10
+                    db 13, 10
+index_page_response_len = $ - index_page_response
+index_page_header db "<h1>TODO</h1>", 10
+                  db "<ul>", 10
+index_page_header_len = $ - index_page_header
+index_page_footer db "</ul>", 10
+index_page_footer_len = $ - index_page_footer
+todo_header db "  <li>"
+todo_header_len = $ - todo_header
+todo_footer db "</li>", 10
+todo_footer_len = $ - todo_footer
+
+post_method_response db "HTTP/1.1 200 OK", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>POST</h1>", 10
+post_method_response_len = $ - post_method_response
+
+put_method_response db "HTTP/1.1 200 OK", 13, 10
+                    db "Content-Type: text/html; charset=utf-8", 13, 10
+                    db "Connection: close", 13, 10
+                    db 13, 10
+                    db "<h1>PUT</h1>", 10
+put_method_response_len = $ - put_method_response
+
+get db "GET "
+get_len = $ - get
+post db "POST "
+post_len = $ - post
+put db "PUT "
+put_len = $ - put
+
+coffee db "coffee"
+coffee_len = $ - coffee
+tea db "tea"
+tea_len = $ - tea
+milk db "milk"
+milk_len = $ - milk
+
+index_route db "/ "
+index_route_len = $ - index_route
 
 start db "INFO: Starting Web Server!", 10
 start_len = $ - start
@@ -186,3 +411,18 @@ accept_trace_msg db "INFO: Waiting for client connections...", 10
 accept_trace_msg_len = $ - accept_trace_msg
 error_msg db "ERROR!", 10
 error_msg_len = $ - error_msg
+
+request_len rq 1
+request     rb REQUEST_CAP
+
+;; ********************
+;; ^
+;;       ^
+
+todo_begin rb TODO_SIZE*TODO_CAP
+todo_end_offset rq 1
+
+;; Routes:
+;; GET /
+;; POST /
+;; DELETE /<id>
