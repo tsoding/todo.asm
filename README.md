@@ -2,6 +2,9 @@
 
 Todo Web Application in flat assembler
 
+> [!WARNING]
+> It's not finished yet.
+
 ## Quick Start
 
 Install [flat assembler](https://flatassembler.net/)
