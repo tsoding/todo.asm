@@ -51,15 +51,15 @@ main:
 
     write STDOUT, request, [request_len]
 
-    funcall4 starts_with, [request_len], request, get_len, get
+    funcall4 starts_with, request, [request_len], get, get_len
     cmp rax, 0
     jg .handle_get_method
 
-    funcall4 starts_with, [request_len], request, post_len, post
+    funcall4 starts_with, request, [request_len], post, post_len
     cmp rax, 0
     jg .handle_post_method
 
-    funcall4 starts_with, [request_len], request, put_len, put
+    funcall4 starts_with, request, [request_len], put, put_len
     cmp rax, 0
     jg .handle_put_method
 
@@ -68,11 +68,11 @@ main:
     jmp .next_request
 
 .handle_get_method:
-    mov rdi, [request_len]
-    sub rdi, get_len
-    mov rsi, request + get_len
-    mov rdx, index_route_len
-    mov r10, index_route
+    mov rdi, request + get_len
+    mov rsi, [request_len]
+    sub rsi, get_len
+    mov rdx, index_route
+    mov r10, index_route_len
     call starts_with
     cmp rax, 0
     jg .handle_get_index
@@ -169,32 +169,32 @@ render_todos_as_html:
     pop rax
     ret
 
-;; rdi - sv.count
-;; rsi - sv.data
-;; rdx - prefix.count
-;; r10 - prefix.data
+;; rdi - sv.data
+;; rsi - sv.count
+;; rdx - prefix.data
+;; r10 - prefix.count
 starts_with:
     xor rax, rax
     xor rbx, rbx
 .next_char:
-    cmp rdi, 0
+    cmp rsi, 0
     jle .done
-    cmp rdx, 0
+    cmp r10,0
     jle .done
 
-    mov al, byte [rsi]
-    mov bl, byte [r10]
+    mov al, byte [rdi]
+    mov bl, byte [rdx]
     cmp rax, rbx
     jne .done
 
-    dec rdi
-    inc rsi
-    dec rdx
-    inc r10
+    dec rsi
+    inc rdi
+    dec r10
+    inc rdx
     jmp .next_char
 
 .done:
-    cmp rdx, 0
+    cmp r10, 0
     je .yes
 .no:
     mov rax, 0
