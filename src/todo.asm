@@ -74,10 +74,7 @@ main:
     funcall4 starts_with, request, [request_len], put, put_len
     cmp rax, 0
     jg .handle_put_method
-
-    write [connfd], response_405, response_405_len
-    close [connfd]
-    jmp .next_request
+    jmp .serve_error_405
 
 .handle_get_method:
     mov rdi, request + get_len
@@ -88,26 +85,29 @@ main:
     call starts_with
     cmp rax, 0
     jg .serve_index_page
-
-    write [connfd], response_404, response_404_len
-    close [connfd]
-    jmp .next_request
+    jmp .serve_error_404
 
 .handle_post_method:
-    write [connfd], post_method_response, post_method_response_len
-    close [connfd]
-    jmp .next_request
+    jmp .serve_error_405
 
 .handle_put_method:
-    write [connfd], put_method_response, put_method_response_len
-    close [connfd]
-    jmp .next_request
+    jmp .serve_error_405
 
 .serve_index_page:
     write [connfd], index_page_response, index_page_response_len
     write [connfd], index_page_header, index_page_header_len
     call render_todos_as_html
     write [connfd], index_page_footer, index_page_footer_len
+    close [connfd]
+    jmp .next_request
+
+.serve_error_404:
+    write [connfd], error_404, error_404_len
+    close [connfd]
+    jmp .next_request
+
+.serve_error_405:
+    write [connfd], error_405, error_405_len
     close [connfd]
     jmp .next_request
 
@@ -201,19 +201,19 @@ sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
-response_404 db "HTTP/1.1 404 Not found", 13, 10
+error_404 db "HTTP/1.1 404 Not found", 13, 10
              db "Content-Type: text/html; charset=utf-8", 13, 10
              db "Connection: close", 13, 10
              db 13, 10
              db "<h1>Page not found</h1>", 10
-response_404_len = $ - response_404
+error_404_len = $ - error_404
 
-response_405 db "HTTP/1.1 405 Method Not Allowed", 13, 10
+error_405 db "HTTP/1.1 405 Method Not Allowed", 13, 10
              db "Content-Type: text/html; charset=utf-8", 13, 10
              db "Connection: close", 13, 10
              db 13, 10
              db "<h1>Method not Allowed</h1>", 10
-response_405_len = $ - response_405
+error_405_len = $ - error_405
 
 index_page_response db "HTTP/1.1 200 OK", 13, 10
                     db "Content-Type: text/html; charset=utf-8", 13, 10
@@ -229,20 +229,6 @@ todo_header db "  <li>"
 todo_header_len = $ - todo_header
 todo_footer db "</li>", 10
 todo_footer_len = $ - todo_footer
-
-post_method_response db "HTTP/1.1 200 OK", 13, 10
-                     db "Content-Type: text/html; charset=utf-8", 13, 10
-                     db "Connection: close", 13, 10
-                     db 13, 10
-                     db "<h1>POST</h1>", 10
-post_method_response_len = $ - post_method_response
-
-put_method_response db "HTTP/1.1 200 OK", 13, 10
-                    db "Content-Type: text/html; charset=utf-8", 13, 10
-                    db "Connection: close", 13, 10
-                    db 13, 10
-                    db "<h1>PUT</h1>", 10
-put_method_response_len = $ - put_method_response
 
 get db "GET "
 get_len = $ - get
