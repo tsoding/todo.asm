@@ -106,3 +106,11 @@ macro exit code
     mov rdi, code
     syscall
 }
+
+struc servaddr_in
+{
+    .sin_family dw 0
+    .sin_port   dw 0
+    .sin_addr   dd 0
+    .sin_zero   dq 0
+}
