@@ -14,8 +14,6 @@ main:
     funcall2 add_todo, coffee, coffee_len
     funcall2 add_todo, tea, tea_len
     funcall2 add_todo, milk, milk_len
-    funcall2 add_todo, get, get_len
-    funcall2 add_todo, post, post_len
 
     write STDOUT, start, start_len
 
