@@ -1,118 +1,11 @@
 format ELF64 executable
 
-SYS_read equ 0
-SYS_write equ 1
-SYS_exit equ 60
-SYS_socket equ 41
-SYS_accept equ 43
-SYS_bind equ 49
-SYS_listen equ 50
-SYS_close equ 3
-
-AF_INET equ 2
-SOCK_STREAM equ 1
-INADDR_ANY equ 0
-
-STDOUT equ 1
-STDERR equ 2
-
-EXIT_SUCCESS equ 0
-EXIT_FAILURE equ 1
+include "linux.inc"
 
 MAX_CONN equ 5
 REQUEST_CAP equ 128*1024
 TODO_SIZE equ 256
 TODO_CAP equ 256
-
-macro funcall2 func, a, b
-{
-    mov rdi, a
-    mov rsi, b
-    call func
-} 
-
-macro funcall4 func, a, b, c, d
-{
-    mov rdi, a
-    mov rsi, b
-    mov rdx, c
-    mov r10, d
-    call func
-} 
-
-macro syscall1 number, a
-{
-    mov rax, number
-    mov rdi, a
-    syscall
-}
-
-macro syscall2 number, a, b
-{
-    mov rax, number
-    mov rdi, a
-    mov rsi, b
-    syscall
-}
-
-macro syscall3 number, a, b, c
-{
-    mov rax, number
-    mov rdi, a
-    mov rsi, b
-    mov rdx, c
-    syscall
-}
-
-macro write fd, buf, count
-{
-    syscall3 SYS_write, fd, buf, count
-}
-
-macro read fd, buf, count
-{
-    syscall3 SYS_read, fd, buf, count
-}
-
-macro close fd
-{
-    syscall1 SYS_close, fd
-}
-
-;; int socket(int domain, int type, int protocol);
-macro socket domain, type, protocol
-{
-    mov rax, SYS_socket
-    mov rdi, domain
-    mov rsi, type
-    mov rdx, protocol
-    syscall
-}
-
-;; int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-macro bind sockfd, addr, addrlen
-{
-    syscall3 SYS_bind, sockfd, addr, addrlen
-}
-
-;;       int listen(int sockfd, int backlog);
-macro listen sockfd, backlog
-{
-    syscall2 SYS_listen, sockfd, backlog
-}
-
-;; int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-macro accept sockfd, addr, addrlen
-{
-    syscall3 SYS_accept, sockfd, addr, addrlen
-}
-
-macro exit code
-{
-    mov rax, SYS_exit
-    mov rdi, code
-    syscall
-}
 
 segment readable executable
 entry main
@@ -223,6 +116,7 @@ main:
 ;; rdi - buf
 ;; rsi - count
 add_todo:
+   int3
    ;; TODO: add check for todo capacity overflow
 
    ;; +*******
@@ -260,7 +154,7 @@ render_todos_as_html:
     jge .done
 
     write [connfd], todo_header, todo_header_len
-    
+
     mov rax, SYS_write
     mov rdi, [connfd]
     mov rsi, [rsp]
@@ -334,9 +228,6 @@ sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
-hello db "Hello from flat assembler!", 10
-hello_len = $ - hello
-
 response_404 db "HTTP/1.1 404 Not found", 13, 10
              db "Content-Type: text/html; charset=utf-8", 13, 10
              db "Connection: close", 13, 10
@@ -397,20 +288,7 @@ milk_len = $ - milk
 index_route db "/ "
 index_route_len = $ - index_route
 
-start db "INFO: Starting Web Server!", 10
-start_len = $ - start
-ok_msg db "INFO: OK!", 10
-ok_msg_len = $ - ok_msg
-socket_trace_msg db "INFO: Creating a socket...", 10
-socket_trace_msg_len = $ - socket_trace_msg
-bind_trace_msg db "INFO: Binding the socket...", 10
-bind_trace_msg_len = $ - bind_trace_msg
-listen_trace_msg db "INFO: Listening to the socket...", 10
-listen_trace_msg_len = $ - listen_trace_msg
-accept_trace_msg db "INFO: Waiting for client connections...", 10
-accept_trace_msg_len = $ - accept_trace_msg
-error_msg db "ERROR!", 10
-error_msg_len = $ - error_msg
+include "messages.inc"
 
 request_len rq 1
 request     rb REQUEST_CAP
