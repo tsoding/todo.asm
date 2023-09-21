@@ -10,7 +10,7 @@ Todo Web Application in flat assembler
 Install [flat assembler](https://flatassembler.net/)
 
 ```console
-$ fasm todo.asm
+$ fasm ./src/todo.asm ./todo
 $ chmod +x ./todo
 $ ./todo
 $ iexplore http://localhost:6969/

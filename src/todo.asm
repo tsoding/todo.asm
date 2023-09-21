@@ -116,7 +116,6 @@ main:
 ;; rdi - buf
 ;; rsi - count
 add_todo:
-   int3
    ;; TODO: add check for todo capacity overflow
 
    ;; +*******
