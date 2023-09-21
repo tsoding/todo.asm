@@ -24,16 +24,16 @@ main:
     write STDOUT, socket_trace_msg, socket_trace_msg_len
     socket AF_INET, SOCK_STREAM, 0
     cmp rax, 0
-    jl .error
+    jl .fatal_error
     mov qword [sockfd], rax
 
     setsockopt [sockfd], SOL_SOCKET, SO_REUSEADDR, enable, 4
     cmp rax, 0
-    jl .error
+    jl .fatal_error
 
     setsockopt [sockfd], SOL_SOCKET, SO_REUSEPORT, enable, 4
     cmp rax, 0
-    jl .error
+    jl .fatal_error
 
     write STDOUT, bind_trace_msg, bind_trace_msg_len
     mov word [servaddr.sin_family], AF_INET
@@ -41,24 +41,24 @@ main:
     mov dword [servaddr.sin_addr], INADDR_ANY
     bind [sockfd], servaddr.sin_family, sizeof_servaddr
     cmp rax, 0
-    jl .error
+    jl .fatal_error
 
     write STDOUT, listen_trace_msg, listen_trace_msg_len
     listen [sockfd], MAX_CONN
     cmp rax, 0
-    jl .error
+    jl .fatal_error
 
 .next_request:
     write STDOUT, accept_trace_msg, accept_trace_msg_len
     accept [sockfd], cliaddr.sin_family, cliaddr_len
     cmp rax, 0
-    jl .error
+    jl .fatal_error
 
     mov qword [connfd], rax
 
     read [connfd], request, REQUEST_CAP
     cmp rax, 0
-    jl .error
+    jl .fatal_error
     mov [request_len], rax
 
     write STDOUT, request, [request_len]
@@ -117,7 +117,7 @@ main:
     close [sockfd]
     exit 0
 
-.error:
+.fatal_error:
     write STDERR, error_msg, error_msg_len
     close [connfd]
     close [sockfd]
