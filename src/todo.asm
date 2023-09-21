@@ -127,30 +127,24 @@ add_todo:
    ;; TODO: use conditional move instead?
    mov rsi, 0xFF
 .do_not_truncate:
+   push rdi ;; void *buf [rsp+8]
+   push rsi ;; size_t count [rsp]
 
    ;; +*******
    ;;  ^
-   ;;  rax
-   mov rax, todo_begin
-   add rax, [todo_end_offset]
-   mov rbx, rsi
-   mov byte [rax], bl
-   inc rax
-
-   ;; dst:   [rax]
-   ;; src:   [rdi]
-   ;; count: rbx
-.next_byte:
-   cmp rbx, 0
-   jle .done
-   mov cl, byte [rdi]
-   mov byte[rax], cl
-   inc rax
+   ;;  rdi
+   mov rdi, todo_begin
+   add rdi, [todo_end_offset]
+   mov rdx, [rsp]
+   mov byte [rdi], dl
    inc rdi
-   dec rbx
-   jmp .next_byte
-.done:
+   mov rsi, [rsp+8]
+   call memcpy
+
    add [todo_end_offset], TODO_SIZE
+
+   pop rsi
+   pop rdi
    ret
 
 render_todos_as_html:
