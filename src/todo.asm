@@ -8,6 +8,9 @@ TODO_SIZE equ 256
 TODO_CAP equ 256
 
 segment readable executable
+
+include "memory.inc"
+
 entry main
 main:
     mov [todo_end_offset], 0
@@ -167,40 +170,6 @@ render_todos_as_html:
     jmp .next_todo
 .done:
     pop rax
-    ret
-
-;; rdi - sv.data
-;; rsi - sv.count
-;; rdx - prefix.data
-;; r10 - prefix.count
-starts_with:
-    xor rax, rax
-    xor rbx, rbx
-.next_char:
-    cmp rsi, 0
-    jle .done
-    cmp r10,0
-    jle .done
-
-    mov al, byte [rdi]
-    mov bl, byte [rdx]
-    cmp rax, rbx
-    jne .done
-
-    dec rsi
-    inc rdi
-    dec r10
-    inc rdx
-    jmp .next_char
-
-.done:
-    cmp r10, 0
-    je .yes
-.no:
-    mov rax, 0
-    ret
-.yes:
-    mov rax, 1
     ret
 
 ;; db - 1 byte
