@@ -87,7 +87,7 @@ main:
     mov r10, index_route_len
     call starts_with
     cmp rax, 0
-    jg .handle_get_index
+    jg .serve_index_page
 
     write [connfd], response_404, response_404_len
     close [connfd]
@@ -103,7 +103,7 @@ main:
     close [connfd]
     jmp .next_request
 
-.handle_get_index:
+.serve_index_page:
     write [connfd], index_page_response, index_page_response_len
     write [connfd], index_page_header, index_page_header_len
     call render_todos_as_html
