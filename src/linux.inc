@@ -6,10 +6,18 @@ SYS_accept equ 43
 SYS_bind equ 49
 SYS_listen equ 50
 SYS_close equ 3
+SYS_setsockopt equ 54
 
 AF_INET equ 2
 SOCK_STREAM equ 1
 INADDR_ANY equ 0
+
+SOL_SOCKET = 1
+SO_REUSEADDR = 2
+SO_REUSEPORT = 15
+
+SOL_TCP = 6
+TCP_NODELAY = 1
 
 STDOUT equ 1
 STDERR equ 2
@@ -54,6 +62,17 @@ macro syscall3 number, a, b, c
     mov rdi, a
     mov rsi, b
     mov rdx, c
+    syscall
+}
+
+macro syscall5 number, a, b, c, d, e
+{
+    mov rax, number
+    mov rdi, a
+    mov rsi, b
+    mov rdx, c
+    mov r10, d
+    mov r8,  e
     syscall
 }
 
@@ -113,4 +132,10 @@ struc servaddr_in
     .sin_port   dw 0
     .sin_addr   dd 0
     .sin_zero   dq 0
+}
+
+; int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+macro setsockopt sockfd, level, optname, optval, optlen
+{
+    syscall5 SYS_setsockopt, sockfd, level, optname, optval, optlen
 }

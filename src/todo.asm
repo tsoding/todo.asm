@@ -27,6 +27,14 @@ main:
     jl .error
     mov qword [sockfd], rax
 
+    setsockopt [sockfd], SOL_SOCKET, SO_REUSEADDR, enable, 4
+    cmp rax, 0
+    jl .error
+
+    setsockopt [sockfd], SOL_SOCKET, SO_REUSEPORT, enable, 4
+    cmp rax, 0
+    jl .error
+
     write STDOUT, bind_trace_msg, bind_trace_msg_len
     mov word [servaddr.sin_family], AF_INET
     mov word [servaddr.sin_port], 14619
@@ -182,6 +190,7 @@ render_todos_as_html:
 
 segment readable writeable
 
+enable dd 1
 sockfd dq -1
 connfd dq -1
 servaddr servaddr_in
