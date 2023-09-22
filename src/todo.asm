@@ -61,36 +61,41 @@ main:
     jl .fatal_error
     mov [request_len], rax
 
-    write STDOUT, request, [request_len]
+    mov [request_cur], request
 
-    funcall4 starts_with, request, [request_len], get, get_len
+    write STDOUT, [request_cur], [request_len]
+
+    funcall4 starts_with, [request_cur], [request_len], get, get_len
     cmp rax, 0
     jg .handle_get_method
 
-    funcall4 starts_with, request, [request_len], post, post_len
+    funcall4 starts_with, [request_cur], [request_len], post, post_len
     cmp rax, 0
     jg .handle_post_method
 
-    funcall4 starts_with, request, [request_len], put, put_len
+    funcall4 starts_with, [request_cur], [request_len], put, put_len
     cmp rax, 0
     jg .handle_put_method
     jmp .serve_error_405
 
 .handle_get_method:
-    mov rdi, request + get_len
-    mov rsi, [request_len]
-    sub rsi, get_len
-    mov rdx, index_route
-    mov r10, index_route_len
+    add [request_cur], get_len
+    sub [request_len], get_len
+
+    funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
     call starts_with
     cmp rax, 0
     jg .serve_index_page
     jmp .serve_error_404
 
 .handle_post_method:
+    add [request_cur], post_len
+    sub [request_len], post_len
     jmp .serve_error_405
 
 .handle_put_method:
+    add [request_cur], put_len
+    sub [request_len], put_len
     jmp .serve_error_405
 
 .serve_index_page:
@@ -252,6 +257,7 @@ index_route_len = $ - index_route
 include "messages.inc"
 
 request_len rq 1
+request_cur rq 1
 request     rb REQUEST_CAP
 
 ;; ********************
