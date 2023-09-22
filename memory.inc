@@ -9,7 +9,7 @@ memcpy:
    jle .done
 
    mov al, byte [rsi]
-   mov byte[rdi], al
+   mov byte [rdi], al
 
    inc rdi
    inc rsi
