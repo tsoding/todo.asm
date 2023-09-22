@@ -250,6 +250,9 @@ add_todo:
    push rdi ;; void *buf [rsp+8]
    push rsi ;; size_t count [rsp]
 
+   funcall3 find_char, [rsp+8], [rsp], 61 ;equal sign
+   inc rax
+
    ;; +*******
    ;;  ^
    ;;  rdi
@@ -258,7 +261,7 @@ add_todo:
    mov rdx, [rsp]
    mov byte [rdi], dl
    inc rdi
-   mov rsi, [rsp+8]
+   mov rsi, rax
    call memcpy
 
    add [todo_end_offset], TODO_SIZE
@@ -343,17 +346,9 @@ index_page_header db "<h1>To-Do</h1>", 10
                   db "<ul>", 10
 index_page_header_len = $ - index_page_header
 index_page_footer db "</ul>", 10
-                  db "<input id='todoText' type='text' onkeypress='handleKeyPress(event)'><input type='submit' value='add' onclick='addTodo()'>", 10
-                  db "<script>", 10
-                  db "    async function handleKeyPress(event) {", 10
-                  db "        if (event.key == 'Enter') addTodo();", 10
-                  db "    }", 10
-                  db "    async function addTodo() {", 10
-                  db "        await fetch('/', { method: 'POST', body: todoText.value });", 10
-                  db "        location.reload();", 10
-                  db "    }", 10
-                  db "    todoText.focus();", 10
-                  db "</script>", 10
+                  db "<form action='/' method='POST' enctype='text/plain'>", 10
+                  db "<input id='todoText' type='text' name='text' autofocus><input type='submit' value='add'>", 10
+                  db "</form>", 10
 index_page_footer_len = $ - index_page_footer
 todo_header db "  <li>"
 todo_header_len = $ - todo_header
