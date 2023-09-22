@@ -91,7 +91,11 @@ main:
 .handle_post_method:
     add [request_cur], post_len
     sub [request_len], post_len
-    jmp .serve_error_405
+
+    funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
+    cmp rax, 0
+    jg .process_post_new_todo
+    jmp .serve_error_404
 
 .handle_put_method:
     add [request_cur], put_len
@@ -106,6 +110,11 @@ main:
     close [connfd]
     jmp .next_request
 
+.serve_error_400:
+    write [connfd], error_400, error_400_len
+    close [connfd]
+    jmp .next_request
+
 .serve_error_404:
     write [connfd], error_404, error_404_len
     close [connfd]
@@ -115,6 +124,14 @@ main:
     write [connfd], error_405, error_405_len
     close [connfd]
     jmp .next_request
+
+.process_post_new_todo:
+    call drop_http_header
+    cmp rax, 0
+    je .serve_error_400
+
+    funcall2 add_todo, [request_cur], [request_len]
+    jmp .serve_index_page
 
 .shutdown:
     write STDOUT, ok_msg, ok_msg_len
@@ -127,6 +144,34 @@ main:
     close [connfd]
     close [sockfd]
     exit 1
+
+drop_http_header:
+.next_line:
+    funcall4 starts_with, [request_cur], [request_len], clrs, 2
+    cmp rax, 0
+    jg .reached_end
+
+    funcall3 find_char, [request_cur], [request_len], 10
+    cmp rax, 0
+    je .invalid_header
+
+    mov rsi, rax
+    sub rsi, [request_cur]
+    inc rsi
+    add [request_cur], rsi
+    sub [request_len], rsi
+
+    jmp .next_line
+
+.reached_end:
+    add [request_cur], 2
+    sub [request_len], 2
+    mov rax, 1
+    ret
+
+.invalid_header:
+    xor rax, rax
+    ret
 
 ;; rdi - void *buf
 ;; rsi - size_t count
@@ -205,6 +250,15 @@ servaddr servaddr_in
 sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
+
+clrs db 13, 10
+
+error_400 db "HTTP/1.1 400 Bad Request", 13, 10
+             db "Content-Type: text/html; charset=utf-8", 13, 10
+             db "Connection: close", 13, 10
+             db 13, 10
+             db "<h1>Bad Request</h1>", 10
+error_400_len = $ - error_400
 
 error_404 db "HTTP/1.1 404 Not found", 13, 10
              db "Content-Type: text/html; charset=utf-8", 13, 10

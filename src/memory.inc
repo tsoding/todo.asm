@@ -19,6 +19,29 @@ memcpy:
 .done:
    ret
 
+
+;; rdi - void *buf
+;; rsi - size_t n
+;; rdx - char c
+find_char:
+   cmp rsi, 0
+   jle .not_found
+
+   mov al, byte [rdi]
+   cmp dl, al
+   je .found
+
+   inc rdi
+   dec rsi
+   jmp find_char
+
+.not_found:
+   xor rax, rax
+   ret
+.found:
+   mov rax, rdi
+   ret
+
 ;; rdi - void *text
 ;; rsi - size_t text_len
 ;; rdx - void *prefix
