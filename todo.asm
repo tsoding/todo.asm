@@ -14,10 +14,6 @@ include "memory.inc"
 entry main
 main:
     mov [todo_end_offset], 0
-    funcall2 add_todo, coffee, coffee_len
-    funcall2 add_todo, tea, tea_len
-    funcall2 add_todo, milk, milk_len
-    funcall2 add_todo, aaaa, aaaa_len
 
     write STDOUT, start, start_len
 
@@ -129,6 +125,13 @@ main:
     call drop_http_header
     cmp rax, 0
     je .serve_error_400
+
+    funcall4 starts_with, [request_cur], [request_len], text_equals, text_equals_len
+    cmp rax, 0
+    je .serve_error_400
+
+    add [request_cur], text_equals_len
+    sub [request_len], text_equals_len
 
     funcall2 add_todo, [request_cur], [request_len]
     jmp .serve_index_page
@@ -279,15 +282,22 @@ index_page_response db "HTTP/1.1 200 OK", 13, 10
                     db "Connection: close", 13, 10
                     db 13, 10
 index_page_response_len = $ - index_page_response
-index_page_header db "<h1>TODO</h1>", 10
+index_page_header db "<h1>To-Do</h1>", 10
                   db "<ul>", 10
 index_page_header_len = $ - index_page_header
 index_page_footer db "</ul>", 10
+                  db "<form action='/' method='post'>", 10
+                  db "    <input id='todoText' name='text' type='text'><input type='submit' value='add'>", 10
+                  db "</form>", 10
+                  db "<script>todoText.focus()</script>", 10
 index_page_footer_len = $ - index_page_footer
 todo_header db "  <li>"
 todo_header_len = $ - todo_header
 todo_footer db "</li>", 10
 todo_footer_len = $ - todo_footer
+
+text_equals db "text="
+text_equals_len = $-text_equals
 
 get db "GET "
 get_len = $ - get
