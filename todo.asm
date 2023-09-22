@@ -313,12 +313,7 @@ request_cur rq 1
 request     rb REQUEST_CAP
 
 ;; ********************
-;; ^
-;;       ^
+
 todo_begin rb TODO_SIZE*TODO_CAP
 todo_end_offset rq 1
 
-;; Routes:
-;; GET /
-;; POST /<text>
-;; DELETE /<id>
