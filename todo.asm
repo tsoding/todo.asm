@@ -87,6 +87,12 @@ main:
     call starts_with
     cmp rax, 0
     jg .serve_index_page
+
+    funcall4 starts_with, [request_cur], [request_len], index_route_alt, index_route_alt_len
+    call starts_with
+    cmp rax, 0
+    jg .process_get_new_todo
+
     jmp .serve_error_404
 
 .handle_post_method:
@@ -157,6 +163,27 @@ main:
 
     funcall2 add_todo, [request_cur], [request_len]
     jmp .serve_index_page
+
+.process_get_new_todo:
+    write STDOUT, alt_trace_msg, alt_trace_msg_len
+
+    mov rdi, request+get_len
+    mov rsi, [request_len]
+    sub rsi, get_len
+    mov rdx, 32
+    call find_char
+    cmp rax, 0
+    je .invalid_header ;; I have no idea if this is correct sry
+
+    mov rdi, request+get_len+7
+    mov rsi, rax
+    sub rsi, request+get_len+7
+    call add_todo
+    jmp .serve_index_page
+
+.invalid_header:
+xor rax, rax
+ret
 
 .shutdown:
     write STDOUT, ok_msg, ok_msg_len
@@ -335,17 +362,10 @@ index_page_header db "<h1>To-Do</h1>", 10
                   db "<ul>", 10
 index_page_header_len = $ - index_page_header
 index_page_footer db "</ul>", 10
-                  db "<input id='todoText' type='text' onkeypress='handleKeyPress(event)'><input type='submit' value='add' onclick='addTodo()'>", 10
-                  db "<script>", 10
-                  db "    async function handleKeyPress(event) {", 10
-                  db "        if (event.key == 'Enter') addTodo();", 10
-                  db "    }", 10
-                  db "    async function addTodo() {", 10
-                  db "        await fetch('/', { method: 'POST', body: todoText.value });", 10
-                  db "        location.reload();", 10
-                  db "    }", 10
-                  db "    todoText.focus();", 10
-                  db "</script>", 10
+                  db "<form method='get'>", 10
+                  db "  <input type='text' name='todo'>", 10
+                  db "  <input type='submit', value='add'>", 10
+                  db "</form>", 10
 index_page_footer_len = $ - index_page_footer
 todo_header db "  <li>"
 todo_header_len = $ - todo_header
@@ -363,6 +383,8 @@ delete_len = $ - delete
 
 index_route db "/ "
 index_route_len = $ - index_route
+index_route_alt db "/"
+index_route_alt_len = $ - index_route_alt
 
 include "messages.inc"
 
