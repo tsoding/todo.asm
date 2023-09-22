@@ -233,6 +233,11 @@ delete_todo:
 .overflow:
    ret
 
+prase_if_form_data:
+   funcall3 find_char, [rsp+8], [rsp], 61 ;equal sign
+   inc rax
+   jmp r9
+
 ;; rdi - void *buf
 ;; rsi - size_t count
 add_todo:
@@ -250,9 +255,10 @@ add_todo:
    push rdi ;; void *buf [rsp+8]
    push rsi ;; size_t count [rsp]
 
-   funcall3 find_char, [rsp+8], [rsp], 61 ;equal sign
-   inc rax
+   mov r9, .no_form_data
+   jmp prase_if_form_data
 
+.no_form_data:
    ;; +*******
    ;;  ^
    ;;  rdi
