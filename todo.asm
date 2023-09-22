@@ -126,12 +126,6 @@ main:
     cmp rax, 0
     je .serve_error_400
 
-    ;; funcall4 starts_with, [request_cur], [request_len], text_equals, text_equals_len
-    ;; cmp rax, 0
-    ;; je .serve_error_400
-    ;; add [request_cur], text_equals_len
-    ;; sub [request_len], text_equals_len
-
     funcall2 add_todo, [request_cur], [request_len]
     jmp .serve_index_page
 
@@ -302,24 +296,12 @@ todo_header_len = $ - todo_header
 todo_footer db "</li>", 10
 todo_footer_len = $ - todo_footer
 
-text_equals db "text="
-text_equals_len = $-text_equals
-
 get db "GET "
 get_len = $ - get
 post db "POST "
 post_len = $ - post
 put db "PUT "
 put_len = $ - put
-
-coffee db "coffee"
-coffee_len = $ - coffee
-tea db "tea"
-tea_len = $ - tea
-milk db "milk"
-milk_len = $ - milk
-aaaa db "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-aaaa_len = $ - aaaa
 
 index_route db "/ "
 index_route_len = $ - index_route
