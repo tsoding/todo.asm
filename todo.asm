@@ -120,19 +120,11 @@ main:
     cmp [request_len], 0
     jle .serve_error_404
 
-    ;; TODO: parse more digits
-    mov rbx, [request_cur]
-    xor rax, rax
-    mov al, byte [rbx]
-    cmp rax, '0'
-    jl .serve_error_404
-    cmp rax, '9'
-    jg .serve_error_404
-    sub rax, '0'
-
+    mov rdi, [request_cur]
+    mov rsi, [request_len]
+    call parse_uint
     mov rdi, rax
     call delete_todo
-
     jmp .serve_index_page
 
 .serve_index_page:
@@ -286,7 +278,7 @@ render_todos_as_html:
     cmp rax, rbx
     jge .done
 
-    write [connfd], todo_header, todo_header_len
+    funcall2 write_cstr, [connfd], todo_header
 
     mov rax, SYS_write
     mov rdi, [connfd]
@@ -296,7 +288,7 @@ render_todos_as_html:
     inc rsi
     syscall
 
-    write [connfd], todo_footer, todo_footer_len
+    funcall2 write_cstr, [connfd], todo_footer
     mov rax, [rsp]
     add rax, TODO_SIZE
     mov [rsp], rax
@@ -356,10 +348,8 @@ index_page_footer db "</ul>", 10
                   db "<input id='todoText' type='text' name='text' autofocus><input type='submit' value='add'>", 10
                   db "</form>", 10
 index_page_footer_len = $ - index_page_footer
-todo_header db "  <li>"
-todo_header_len = $ - todo_header
-todo_footer db "</li>", 10
-todo_footer_len = $ - todo_footer
+todo_header db "  <li>", 0
+todo_footer db "</li>", 10, 0
 
 get db "GET "
 get_len = $ - get
