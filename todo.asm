@@ -126,12 +126,11 @@ main:
     cmp rax, 0
     je .serve_error_400
 
-    funcall4 starts_with, [request_cur], [request_len], text_equals, text_equals_len
-    cmp rax, 0
-    je .serve_error_400
-
-    add [request_cur], text_equals_len
-    sub [request_len], text_equals_len
+    ;; funcall4 starts_with, [request_cur], [request_len], text_equals, text_equals_len
+    ;; cmp rax, 0
+    ;; je .serve_error_400
+    ;; add [request_cur], text_equals_len
+    ;; sub [request_len], text_equals_len
 
     funcall2 add_todo, [request_cur], [request_len]
     jmp .serve_index_page
@@ -286,10 +285,17 @@ index_page_header db "<h1>To-Do</h1>", 10
                   db "<ul>", 10
 index_page_header_len = $ - index_page_header
 index_page_footer db "</ul>", 10
-                  db "<form action='/' method='post'>", 10
-                  db "    <input id='todoText' name='text' type='text'><input type='submit' value='add'>", 10
-                  db "</form>", 10
-                  db "<script>todoText.focus()</script>", 10
+                  db "<input id='todoText' type='text' onkeypress='handleKeyPress(event)'><input type='submit' value='add' onclick='addTodo()'>", 10
+                  db "<script>", 10
+                  db "    async function handleKeyPress(event) {", 10
+                  db "        if (event.key == 'Enter') addTodo();", 10
+                  db "    }", 10
+                  db "    async function addTodo() {", 10
+                  db "        await fetch('/', { method: 'POST', body: todoText.value });", 10
+                  db "        location.reload();", 10
+                  db "    }", 10
+                  db "    todoText.focus();", 10
+                  db "</script>", 10
 index_page_footer_len = $ - index_page_footer
 todo_header db "  <li>"
 todo_header_len = $ - todo_header
