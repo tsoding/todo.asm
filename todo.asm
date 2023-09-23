@@ -164,15 +164,11 @@ main:
     jmp .serve_index_page
 
 .reached_end:
-    add [request_cur], 2
-    sub [request_len], 2
-    mov rax, 1
-    ret
+    ; no user agent?
+    jmp .serve_index_page
 
 .invalid_header:
-    xor rax, rax
-    ret
-
+    jmp .serve_error_400
 
 .serve_index_text:
     write [connfd], index_text_response, index_text_response_len
