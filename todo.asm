@@ -79,6 +79,7 @@ main:
     call starts_with
     cmp rax, 0
     jg .serve_index_page
+
     jmp .serve_error_404
 
 .handle_post_method:
@@ -87,8 +88,21 @@ main:
 
     funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
     cmp rax, 0
-    jg .process_post_todo
-    jmp .serve_error_404
+    jle .serve_error_404
+
+    call drop_http_header
+    cmp rax, 0
+    je .serve_error_400
+
+    funcall4 starts_with, [request_cur], [request_len], todo_form_data_prefix, todo_form_data_prefix_len
+    cmp rax, 0
+    jg .add_new_todo_and_serve_index_page
+
+    funcall4 starts_with, [request_cur], [request_len], delete_form_data_prefix, delete_form_data_prefix_len
+    cmp rax, 0
+    jg .delete_todo_and_serve_index_page
+
+    jmp .serve_error_400
 
 .serve_index_page:
     write [connfd], index_page_response, index_page_response_len
@@ -112,21 +126,6 @@ main:
     write [connfd], error_405, error_405_len
     close [connfd]
     jmp .next_request
-
-.process_post_todo:
-    call drop_http_header
-    cmp rax, 0
-    je .serve_error_400
-
-    funcall4 starts_with, [request_cur], [request_len], todo_form_data_prefix, todo_form_data_prefix_len
-    cmp rax, 0
-    jg .add_new_todo_and_serve_index_page
-
-    funcall4 starts_with, [request_cur], [request_len], delete_form_data_prefix, delete_form_data_prefix_len
-    cmp rax, 0
-    jg .delete_todo_and_serve_index_page
-
-    jmp .serve_error_400
 
 .add_new_todo_and_serve_index_page:
     add [request_cur], todo_form_data_prefix_len
