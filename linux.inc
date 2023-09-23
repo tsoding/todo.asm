@@ -1,4 +1,5 @@
 SYS_read equ 0
+SYS_open equ 2
 SYS_write equ 1
 SYS_exit equ 60
 SYS_socket equ 41
@@ -7,6 +8,13 @@ SYS_bind equ 49
 SYS_listen equ 50
 SYS_close equ 3
 SYS_setsockopt equ 54
+; SYS_fstat64 equ 197
+SYS_fstat64 equ 5
+
+O_RDONLY = 0
+O_WRONLY = 1
+O_CREAT = 64
+O_TRUNC = 512
 
 AF_INET equ 2
 SOCK_STREAM equ 1
@@ -24,6 +32,42 @@ STDERR equ 2
 
 EXIT_SUCCESS equ 0
 EXIT_FAILURE equ 1
+
+; struct stat64 {
+; 	unsigned long long	st_dev;
+; 	unsigned char	__pad0[4];
+
+; 	unsigned long	__st_ino;
+
+; 	unsigned int	st_mode;
+; 	unsigned int	st_nlink;
+
+; 	unsigned long	st_uid;
+; 	unsigned long	st_gid;
+
+; 	unsigned long long	st_rdev;
+; 	unsigned char	__pad3[4];
+
+; 	long long	st_size;
+; 	unsigned long	st_blksize;
+
+; 	/* Number 512-byte blocks allocated. */
+; 	unsigned long long	st_blocks;
+
+; 	unsigned long	st_atime;
+; 	unsigned long	st_atime_nsec;
+
+; 	unsigned long	st_mtime;
+; 	unsigned int	st_mtime_nsec;
+
+; 	unsigned long	st_ctime;
+; 	unsigned long	st_ctime_nsec;
+
+; 	unsigned long long	st_ino;
+; };
+
+sizeof_stat64 = 144
+stat64.st_size = 48
 
 macro funcall2 func, a, b
 {
@@ -134,6 +178,11 @@ macro exit code
     syscall
 }
 
+macro open filename, flags, mode
+{
+    syscall3 SYS_open, filename, flags, mode
+}
+
 struc servaddr_in
 {
     .sin_family dw 0
@@ -147,3 +196,8 @@ macro setsockopt sockfd, level, optname, optval, optlen
 {
     syscall5 SYS_setsockopt, sockfd, level, optname, optval, optlen
 }
+
+macro fstat64 fd, statbuf
+{
+    syscall2 SYS_fstat64, fd, statbuf
+} 
