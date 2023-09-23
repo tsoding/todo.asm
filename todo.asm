@@ -15,9 +15,9 @@ entry main
 main:
     call load_todos
 
-    write STDOUT, start, start_len
+    funcall2 write_cstr, STDOUT, start
 
-    write STDOUT, socket_trace_msg, socket_trace_msg_len
+    funcall2 write_cstr, STDOUT, socket_trace_msg
     socket AF_INET, SOCK_STREAM, 0
     cmp rax, 0
     jl .fatal_error
@@ -31,7 +31,7 @@ main:
     cmp rax, 0
     jl .fatal_error
 
-    write STDOUT, bind_trace_msg, bind_trace_msg_len
+    funcall2 write_cstr, STDOUT, bind_trace_msg
     mov word [servaddr.sin_family], AF_INET
     mov word [servaddr.sin_port], 14619
     mov dword [servaddr.sin_addr], INADDR_ANY
@@ -39,13 +39,13 @@ main:
     cmp rax, 0
     jl .fatal_error
 
-    write STDOUT, listen_trace_msg, listen_trace_msg_len
+    funcall2 write_cstr, STDOUT, listen_trace_msg
     listen [sockfd], MAX_CONN
     cmp rax, 0
     jl .fatal_error
 
 .next_request:
-    write STDOUT, accept_trace_msg, accept_trace_msg_len
+    funcall2 write_cstr, STDOUT, accept_trace_msg
     accept [sockfd], cliaddr.sin_family, cliaddr_len
     cmp rax, 0
     jl .fatal_error
@@ -146,13 +146,13 @@ main:
     jmp .serve_index_page
 
 .shutdown:
-    write STDOUT, ok_msg, ok_msg_len
+    funcall2 write_cstr, STDOUT, ok_msg
     close [connfd]
     close [sockfd]
     exit 0
 
 .fatal_error:
-    write STDERR, error_msg, error_msg_len
+    funcall2 write_cstr, STDERR, error_msg
     close [connfd]
     close [sockfd]
     exit 1
