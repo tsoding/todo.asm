@@ -1,3 +1,5 @@
+;; Linux related constants and macros
+
 SYS_read equ 0
 SYS_open equ 2
 SYS_write equ 1
@@ -8,7 +10,6 @@ SYS_bind equ 49
 SYS_listen equ 50
 SYS_close equ 3
 SYS_setsockopt equ 54
-; SYS_fstat64 equ 197
 SYS_fstat64 equ 5
 
 O_RDONLY = 0
