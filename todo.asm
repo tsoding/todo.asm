@@ -255,9 +255,10 @@ load_todos:
    mov rax, [rsp]
    cmp rax, TODO_CAP*TODO_SIZE
    jle .skip_truncate
+   ;; TODO: use conditional move
    mov qword [rsp], TODO_CAP*TODO_SIZE
+   .skip_truncate:
 
-.skip_truncate:
    ;; Read the entire db from file system
    read [rsp+8], todo_begin, [rsp]
    mov rax, [rsp]
@@ -287,11 +288,10 @@ add_todo:
    jge .capacity_overflow
 
    ;; Truncate strings longer than 255
-   ;; TODO: use conditional move instead?
-   cmp rsi, 0xFF
-   jle .do_not_truncate
-   mov rsi, 0xFF
-.do_not_truncate:
+   mov rax, 0xFF
+   cmp rsi, rax
+   cmovg rsi, rax
+
    push rdi ;; void *buf [rsp+8]
    push rsi ;; size_t count [rsp]
 
