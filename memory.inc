@@ -1,6 +1,36 @@
 ;; Subroutines for working with memory
 
 ;; rdi - int fd
+;; rsi - unsigned long long int x
+write_uint:
+    test rsi, rsi
+    jz .base_zero
+
+    mov rcx, 10     ;; 10 literal for division
+    mov rax, rsi    ;; keeping track of rsi in rax cause it's easier to div it like that
+    mov r10, 0      ;; counter of how many digits we already converted
+.next_digit:
+    test rax, rax
+    jz .done
+    mov rdx, 0
+    div rcx
+    add rdx, '0'
+    dec rsp
+    mov byte [rsp], dl
+    inc r10
+    jmp .next_digit
+.done:
+    write rdi, rsp, r10
+    add rsp, r10
+    ret
+.base_zero:
+    dec rsp
+    mov byte [rsp], '0'
+    write rdi, rsp, 1
+    inc rsp
+    ret
+
+;; rdi - int fd
 ;; rsi - const char *s
 write_cstr:
     push rsi

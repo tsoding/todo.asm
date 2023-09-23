@@ -157,11 +157,28 @@ main:
 
     funcall4 starts_with, [request_cur], [request_len], todo_form_data_prefix, todo_form_data_prefix_len
     cmp rax, 0
-    je .serve_error_400
+    jg .add_new_todo_and_serve_index_page
+
+    funcall4 starts_with, [request_cur], [request_len], delete_form_data_prefix, delete_form_data_prefix_len
+    cmp rax, 0
+    jg .delete_todo_and_serve_index_page
+
+    jmp .serve_error_400
+
+.add_new_todo_and_serve_index_page:
     add [request_cur], todo_form_data_prefix_len
     sub [request_len], todo_form_data_prefix_len
 
     funcall2 add_todo, [request_cur], [request_len]
+    jmp .serve_index_page
+
+.delete_todo_and_serve_index_page:
+    add [request_cur], delete_form_data_prefix_len
+    sub [request_len], delete_form_data_prefix_len
+
+    funcall2 parse_uint, [request_cur], [request_len]
+    mov rdi, rax
+    call delete_todo
     jmp .serve_index_page
 
 .shutdown:
@@ -267,6 +284,7 @@ add_todo:
    ret
 
 render_todos_as_html:
+    push 0
     push todo_begin
 .next_todo:
     mov rax, [rsp]
@@ -276,6 +294,9 @@ render_todos_as_html:
     jge .done
 
     funcall2 write_cstr, [connfd], todo_header
+    funcall2 write_cstr, [connfd], delete_button_prefix
+    funcall2 write_uint, [connfd], [rsp+8]
+    funcall2 write_cstr, [connfd], delete_button_suffix
 
     mov rax, SYS_write
     mov rdi, [connfd]
@@ -289,8 +310,10 @@ render_todos_as_html:
     mov rax, [rsp]
     add rax, TODO_SIZE
     mov [rsp], rax
+    inc qword [rsp+8]
     jmp .next_todo
 .done:
+    pop rax
     pop rax
     ret
 
@@ -348,9 +371,14 @@ index_page_footer db "</ul>", 10
 index_page_footer_len = $ - index_page_footer
 todo_header db "  <li>", 0
 todo_footer db "</li>", 10, 0
+delete_button_prefix db "<form style='display: inline' method='post' action='/'>"
+                     db "<button type='submit' name='delete' value='", 0
+delete_button_suffix db "'>x</button></form> ", 0
 
 todo_form_data_prefix db "todo="
 todo_form_data_prefix_len = $ - todo_form_data_prefix
+delete_form_data_prefix db "delete="
+delete_form_data_prefix_len = $ - delete_form_data_prefix
 
 get db "GET "
 get_len = $ - get
