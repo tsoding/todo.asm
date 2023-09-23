@@ -252,12 +252,11 @@ load_todos:
    jne .error
 
    ;; Truncate the size to supported TODO_CAP
+   mov rcx, TODO_CAP*TODO_SIZE
    mov rax, [rsp]
-   cmp rax, TODO_CAP*TODO_SIZE
-   jle .skip_truncate
-   ;; TODO: use conditional move
-   mov qword [rsp], TODO_CAP*TODO_SIZE
-   .skip_truncate:
+   cmp rax, rcx
+   cmovg rax, rcx
+   mov [rsp], rax
 
    ;; Read the entire db from file system
    read [rsp+8], todo_begin, [rsp]
