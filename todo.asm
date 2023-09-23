@@ -13,7 +13,6 @@ include "memory.inc"
 
 entry main
 main:
-    mov [todo_end_offset], 0
     call load_todos
 
     write STDOUT, start, start_len
