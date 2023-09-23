@@ -9,7 +9,7 @@ TODO_CAP equ 256
 
 segment readable executable
 
-include "memory.inc"
+include "utils.inc"
 
 entry main
 main:

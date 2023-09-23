@@ -1,7 +1,8 @@
-;; Subroutines for working with memory
+;; Generally useful utility functions
 
-;; rdi - int fd
-;; rsi - unsigned long long int x
+;; Write an integer to a file
+;;   rdi - int fd
+;;   rsi - uint64_t int x
 write_uint:
     test rsi, rsi
     jz .base_zero
@@ -30,8 +31,9 @@ write_uint:
     inc rsp
     ret
 
-;; rdi - int fd
-;; rsi - const char *s
+;; Write a NULL-terminated string to a file
+;;   rdi - int fd
+;;   rsi - const char *s
 write_cstr:
     push rsi
     push rdi
@@ -45,7 +47,8 @@ write_cstr:
     syscall
     ret
 
-;; rdi - const char *s
+;; Compute the length of a NULL-terminated string
+;;   rdi - const char *s
 strlen:
     push rdi
     xor rax, rax
@@ -62,8 +65,9 @@ strlen:
     mov rax, rdi
     ret
 
-;; rdi - void *buf
-;; rsi - size_t n
+;; Parse unsigned integer from a sized string
+;;   rdi - void *buf
+;;   rsi - size_t n
 parse_uint:
     xor rax, rax
     xor rbx, rbx
@@ -88,9 +92,10 @@ parse_uint:
 .done:
     ret
 
-;; rdi - void *dst
-;; rsi - void *src
-;; rdx - size_t n
+;; Copy a chunk of memory
+;;   rdi - void *dst
+;;   rsi - void *src
+;;   rdx - size_t n
 memcpy:
 .next_byte:
    cmp rdx, 0
@@ -108,9 +113,10 @@ memcpy:
    ret
 
 
-;; rdi - void *buf
-;; rsi - size_t n
-;; rdx - char c
+;; Find a character with a sized string
+;;   rdi - void *buf
+;;   rsi - size_t n
+;;   rdx - char c
 find_char:
    cmp rsi, 0
    jle .not_found
@@ -130,10 +136,11 @@ find_char:
    mov rax, rdi
    ret
 
-;; rdi - void *text
-;; rsi - size_t text_len
-;; rdx - void *prefix
-;; r10 - size_t prefix_len
+;; Check if text starts with the prefix (both strings are sized)
+;;   rdi - void *text
+;;   rsi - size_t text_len
+;;   rdx - void *prefix
+;;   r10 - size_t prefix_len
 starts_with:
     xor rax, rax
     xor rbx, rbx
