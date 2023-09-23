@@ -69,14 +69,6 @@ main:
     cmp rax, 0
     jg .handle_post_method
 
-    funcall4 starts_with, [request_cur], [request_len], put, put_len
-    cmp rax, 0
-    jg .handle_put_method
-
-    funcall4 starts_with, [request_cur], [request_len], delete, delete_len
-    cmp rax, 0
-    jg .handle_delete_method
-
     jmp .serve_error_405
 
 .handle_get_method:
@@ -95,37 +87,8 @@ main:
 
     funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
     cmp rax, 0
-    jg .process_post_new_todo
+    jg .process_post_todo
     jmp .serve_error_404
-
-.handle_put_method:
-    add [request_cur], put_len
-    sub [request_len], put_len
-    jmp .serve_error_405
-
-.handle_delete_method:
-    add [request_cur], delete_len
-    sub [request_len], delete_len
-
-    cmp [request_len], 0
-    jle .serve_error_400
-
-    mov rbx, [request_cur]
-    mov al, byte [rbx]
-    cmp al, '/'
-    jne .serve_error_400
-    add [request_cur], 1
-    sub [request_len], 1
-
-    cmp [request_len], 0
-    jle .serve_error_404
-
-    mov rdi, [request_cur]
-    mov rsi, [request_len]
-    call parse_uint
-    mov rdi, rax
-    call delete_todo
-    jmp .serve_index_page
 
 .serve_index_page:
     write [connfd], index_page_response, index_page_response_len
@@ -150,7 +113,7 @@ main:
     close [connfd]
     jmp .next_request
 
-.process_post_new_todo:
+.process_post_todo:
     call drop_http_header
     cmp rax, 0
     je .serve_error_400
@@ -384,10 +347,6 @@ get db "GET "
 get_len = $ - get
 post db "POST "
 post_len = $ - post
-put db "PUT "
-put_len = $ - put
-delete db "DELETE "
-delete_len = $ - delete
 
 index_route db "/ "
 index_route_len = $ - index_route
