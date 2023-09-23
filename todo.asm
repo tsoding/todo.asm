@@ -86,7 +86,7 @@ main:
     funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
     call starts_with
     cmp rax, 0
-    jg .serve_index_page
+    jg .choose_index
     jmp .serve_error_404
 
 .handle_post_method:
@@ -126,6 +126,60 @@ main:
     mov rdi, rax
     call delete_todo
     jmp .serve_index_page
+
+.choose_index:
+    .next_line:
+    funcall4 starts_with, [request_cur], [request_len], clrs, 2
+    cmp rax, 0
+    jg .reached_end
+
+    funcall3 find_char, [request_cur], [request_len], 10
+    cmp rax, 0
+    je .invalid_header
+
+    mov rsi, rax
+    sub rsi, [request_cur]
+    inc rsi
+    add [request_cur], rsi
+    sub [request_len], rsi
+
+    funcall4 starts_with, [request_cur], [request_len], user_agent, user_agent_len
+    cmp rax, 0
+    jg .parse_user_agent
+
+    jmp .next_line
+
+.parse_user_agent:
+    funcall3 find_char, [request_cur], [request_len], 32
+
+    mov rsi, rax
+    sub rsi, [request_cur]
+    inc rsi
+    add [request_cur], rsi
+    sub [request_len], rsi
+
+    funcall4 starts_with, [request_cur], [request_len], curl, curl_len
+    cmp rax, 0
+    jg .serve_index_text
+    jmp .serve_index_page
+
+.reached_end:
+    add [request_cur], 2
+    sub [request_len], 2
+    mov rax, 1
+    ret
+
+.invalid_header:
+    xor rax, rax
+    ret
+
+
+.serve_index_text:
+    write [connfd], index_text_response, index_text_response_len
+    write [connfd], index_text_header, index_text_header_len
+    call render_todos_as_text
+    close [connfd]
+    jmp .next_request
 
 .serve_index_page:
     write [connfd], index_page_response, index_page_response_len
@@ -266,6 +320,34 @@ add_todo:
 .capacity_overflow:
    ret
 
+render_todos_as_text:
+    push todo_begin
+.next_todo:
+    mov rax, [rsp]
+    mov rbx, todo_begin
+    add rbx, [todo_end_offset]
+    cmp rax, rbx
+    jge .done
+
+    funcall2 write_cstr, [connfd], todo_text_header
+
+    mov rax, SYS_write
+    mov rdi, [connfd]
+    mov rsi, [rsp]
+    xor rdx, rdx
+    mov dl, byte [rsi]
+    inc rsi
+    syscall
+
+    funcall2 write_cstr, [connfd], todo_text_footer
+    mov rax, [rsp]
+    add rax, TODO_SIZE
+    mov [rsp], rax
+    jmp .next_todo
+.done:
+    pop rax
+    ret
+
 render_todos_as_html:
     push todo_begin
 .next_todo:
@@ -349,6 +431,16 @@ index_page_footer_len = $ - index_page_footer
 todo_header db "  <li>", 0
 todo_footer db "</li>", 10, 0
 
+index_text_response db "HTTP/1.1 200 OK", 13, 10
+                    db "Content-Type: text/plain; charset=utf-8", 13, 10
+                    db "Connection: close", 13, 10
+                    db 13, 10
+index_text_response_len = $ - index_text_response
+index_text_header db "To-Do", 10, 10
+index_text_header_len = $ - index_text_header
+todo_text_header db "* ", 0
+todo_text_footer db 10, 0
+
 todo_form_data_prefix db "todo="
 todo_form_data_prefix_len = $ - todo_form_data_prefix
 
@@ -360,6 +452,10 @@ put db "PUT "
 put_len = $ - put
 delete db "DELETE "
 delete_len = $ - delete
+user_agent db "User-Agent: "
+user_agent_len = $ - user_agent
+curl db "curl"
+curl_len = $ - curl
 
 index_route db "/ "
 index_route_len = $ - index_route
