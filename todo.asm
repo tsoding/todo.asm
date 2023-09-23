@@ -105,25 +105,25 @@ main:
     jmp .serve_error_400
 
 .serve_index_page:
-    write [connfd], index_page_response, index_page_response_len
-    write [connfd], index_page_header, index_page_header_len
+    funcall2 write_cstr, [connfd], index_page_response
+    funcall2 write_cstr, [connfd], index_page_header
     call render_todos_as_html
-    write [connfd], index_page_footer, index_page_footer_len
+    funcall2 write_cstr, [connfd], index_page_footer
     close [connfd]
     jmp .next_request
 
 .serve_error_400:
-    write [connfd], error_400, error_400_len
+    funcall2 write_cstr, [connfd], error_400
     close [connfd]
     jmp .next_request
 
 .serve_error_404:
-    write [connfd], error_404, error_404_len
+    funcall2 write_cstr, [connfd], error_404
     close [connfd]
     jmp .next_request
 
 .serve_error_405:
-    write [connfd], error_405, error_405_len
+    funcall2 write_cstr, [connfd], error_405
     close [connfd]
     jmp .next_request
 
@@ -211,8 +211,6 @@ delete_todo:
    sub [todo_end_offset], TODO_SIZE
 .overflow:
    ret
-
-;; ........|....|..............
 
 load_todos:
    ;; [rsp+8] - fd
@@ -342,11 +340,6 @@ render_todos_as_html:
     pop rax
     ret
 
-;; db - 1 byte
-;; dw - 2 byte
-;; dd - 4 byte
-;; dq - 8 byte
-
 segment readable writeable
 
 enable dd 1
@@ -359,46 +352,47 @@ cliaddr_len dd sizeof_servaddr
 
 clrs db 13, 10
 
-error_400 db "HTTP/1.1 400 Bad Request", 13, 10
-             db "Content-Type: text/html; charset=utf-8", 13, 10
-             db "Connection: close", 13, 10
-             db 13, 10
-             db "<h1>Bad Request</h1>", 10
-error_400_len = $ - error_400
-
-error_404 db "HTTP/1.1 404 Not found", 13, 10
-             db "Content-Type: text/html; charset=utf-8", 13, 10
-             db "Connection: close", 13, 10
-             db 13, 10
-             db "<h1>Page not found</h1>", 10
-error_404_len = $ - error_404
-
-error_405 db "HTTP/1.1 405 Method Not Allowed", 13, 10
-             db "Content-Type: text/html; charset=utf-8", 13, 10
-             db "Connection: close", 13, 10
-             db 13, 10
-             db "<h1>Method not Allowed</h1>", 10
-error_405_len = $ - error_405
-
-index_page_response db "HTTP/1.1 200 OK", 13, 10
-                    db "Content-Type: text/html; charset=utf-8", 13, 10
-                    db "Connection: close", 13, 10
-                    db 13, 10
-index_page_response_len = $ - index_page_response
-index_page_header db "<h1>To-Do</h1>", 10
-                  db "<ul>", 10
-index_page_header_len = $ - index_page_header
-index_page_footer db "</ul>", 10
-                  db "<form method='post' action='/' enctype='text/plain'>", 10
-                  db "    <input type='text' name='todo' autofocus>", 10
-                  db "    <input type='submit' value='add'>", 10
-                  db "</form>", 10
-index_page_footer_len = $ - index_page_footer
-todo_header db "  <li>", 0
-todo_footer db "</li>", 10, 0
+error_400            db "HTTP/1.1 400 Bad Request", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Bad Request</h1>", 10
+                     db 0
+error_404            db "HTTP/1.1 404 Not found", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Page not found</h1>", 10
+                     db 0
+error_405            db "HTTP/1.1 405 Method Not Allowed", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Method not Allowed</h1>", 10
+                     db 0
+index_page_response  db "HTTP/1.1 200 OK", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db 0
+index_page_header    db "<h1>To-Do</h1>", 10
+                     db "<ul>", 10
+                     db 0
+index_page_footer    db "</ul>", 10
+                     db "<form method='post' action='/' enctype='text/plain'>", 10
+                     db "    <input type='text' name='todo' autofocus>", 10
+                     db "    <input type='submit' value='add'>", 10
+                     db "</form>", 10
+                     db 0
+todo_header          db "  <li>"
+                     db 0
+todo_footer          db "</li>", 10
+                     db 0
 delete_button_prefix db "<form style='display: inline' method='post' action='/'>"
-                     db "<button type='submit' name='delete' value='", 0
-delete_button_suffix db "'>x</button></form> ", 0
+                     db "<button type='submit' name='delete' value='"
+                     db 0
+delete_button_suffix db "'>x</button></form> "
+                     db 0
 
 todo_form_data_prefix db "todo="
 todo_form_data_prefix_len = $ - todo_form_data_prefix
@@ -427,8 +421,3 @@ todo_begin rb TODO_SIZE*TODO_CAP
 todo_end_offset rq 1
 
 statbuf rb sizeof_stat64
-
-;; Routes:
-;; GET /
-;; POST /<text>
-;; DELETE /<id>
