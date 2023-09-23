@@ -88,8 +88,19 @@ main:
 
     funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
     cmp rax, 0
-    jle .serve_error_404
+    jg .process_add_or_delete_todo_post
 
+    funcall4 starts_with, [request_cur], [request_len], shutdown_route, shutdown_route_len
+    cmp rax, 0
+    jg .process_shutdown
+
+    jmp .serve_error_404
+
+.process_shutdown:
+    funcall2 write_cstr, [connfd], shutdown_response
+    jmp .shutdown
+
+.process_add_or_delete_todo_post:
     call drop_http_header
     cmp rax, 0
     je .serve_error_400
@@ -357,18 +368,21 @@ error_400            db "HTTP/1.1 400 Bad Request", 13, 10
                      db "Connection: close", 13, 10
                      db 13, 10
                      db "<h1>Bad Request</h1>", 10
+                     db "<a href='/'>Back to Home</a>", 10
                      db 0
 error_404            db "HTTP/1.1 404 Not found", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
                      db "Connection: close", 13, 10
                      db 13, 10
                      db "<h1>Page not found</h1>", 10
+                     db "<a href='/'>Back to Home</a>", 10
                      db 0
 error_405            db "HTTP/1.1 405 Method Not Allowed", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
                      db "Connection: close", 13, 10
                      db 13, 10
                      db "<h1>Method not Allowed</h1>", 10
+                     db "<a href='/'>Back to Home</a>", 10
                      db 0
 index_page_response  db "HTTP/1.1 200 OK", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
@@ -383,6 +397,9 @@ index_page_footer    db "</ul>", 10
                      db "    <input type='text' name='todo' autofocus>", 10
                      db "    <input type='submit' value='add'>", 10
                      db "</form>", 10
+                     db "<form method='post' action='/shutdown'>", 10
+                     db "    <input type='submit' value='shutdown'>", 10
+                     db "</form>", 10
                      db 0
 todo_header          db "  <li>"
                      db 0
@@ -392,6 +409,13 @@ delete_button_prefix db "<form style='display: inline' method='post' action='/'>
                      db "<button type='submit' name='delete' value='"
                      db 0
 delete_button_suffix db "'>x</button></form> "
+                     db 0
+shutdown_response    db "HTTP/1.1 200 OK", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Shutting down the server...</h1>", 10
+                     db "Please close this tab"
                      db 0
 
 todo_form_data_prefix db "todo="
@@ -406,8 +430,11 @@ post_len = $ - post
 
 index_route db "/ "
 index_route_len = $ - index_route
-include "messages.inc"
 
+shutdown_route db "/shutdown "
+shutdown_route_len = $ - shutdown_route
+
+include "messages.inc"
 
 todo_db_file_path db "todo.db", 0
 
