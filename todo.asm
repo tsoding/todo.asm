@@ -279,6 +279,7 @@ save_todos:
 .fail:
    ret
 
+;; TODO: sanitize the input to prevent XSS
 ;; rdi - void *buf
 ;; rsi - size_t count
 add_todo:
