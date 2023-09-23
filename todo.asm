@@ -288,7 +288,6 @@ add_todo:
 
    ;; Truncate strings longer than 255
    ;; TODO: use conditional move instead?
-   ;; TODO: the truncation limit should somehow depend on the TODO_SIZE
    cmp rsi, 0xFF
    jle .do_not_truncate
    mov rsi, 0xFF
