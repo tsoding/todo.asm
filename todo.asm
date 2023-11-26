@@ -69,7 +69,7 @@ main:
     cmp rax, 0
     jg .handle_post_method
 
-    jmp .serve_error_405
+    jmp .serve_error_501
 
 .handle_get_method:
     add [request_cur], get_len
@@ -133,8 +133,8 @@ main:
     close [connfd]
     jmp .next_request
 
-.serve_error_405:
-    funcall2 write_cstr, [connfd], error_405
+.serve_error_501:
+    funcall2 write_cstr, [connfd], error_501
     close [connfd]
     jmp .next_request
 
@@ -376,11 +376,11 @@ error_404            db "HTTP/1.1 404 Not found", 13, 10
                      db "<h1>Page not found</h1>", 10
                      db "<a href='/'>Back to Home</a>", 10
                      db 0
-error_405            db "HTTP/1.1 405 Method Not Allowed", 13, 10
+error_501            db "HTTP/1.1 501 Not Implemented", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
                      db "Connection: close", 13, 10
                      db 13, 10
-                     db "<h1>Method not Allowed</h1>", 10
+                     db "<h1>Not Implemented</h1>", 10
                      db "<a href='/'>Back to Home</a>", 10
                      db 0
 index_page_response  db "HTTP/1.1 200 OK", 13, 10
